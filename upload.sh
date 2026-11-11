@@ -25,11 +25,17 @@ project="${NANOBOM_PROJECT:?the project input is required}"
 sbom="${NANOBOM_SBOM:?no SBOM to upload}"
 fail_on="$(printf '%s' "${NANOBOM_FAIL_ON:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
 wait="${NANOBOM_WAIT:-true}"
+version="${NANOBOM_VERSION:-}"
+latest="$(printf '%s' "${NANOBOM_LATEST:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
 
 [[ -f "$sbom" ]] || fail "SBOM not found: $sbom"
 case "$wait" in
   true | false) ;;
   *) fail "wait must be true or false, not '$wait'" ;;
+esac
+case "$latest" in
+  "" | true | false) ;;
+  *) fail "latest must be true or false, not '${NANOBOM_LATEST:-}'" ;;
 esac
 output sbom "$sbom"
 
@@ -42,11 +48,15 @@ query="$(
   jq --raw-output --null-input \
     --arg source_commit "${NANOBOM_SOURCE_COMMIT:-}" \
     --arg image_tag "${NANOBOM_IMAGE_TAG:-}" \
+    --arg version "$version" \
+    --arg latest "$latest" \
     --arg fail_on "$fail_on" \
     --arg wait "$wait" \
     '[
       {key: "source_commit", value: $source_commit},
       {key: "image_tag", value: $image_tag},
+      {key: "version", value: $version},
+      {key: "latest", value: $latest},
       {key: "fail_on", value: $fail_on},
       {key: "wait", value: (if $wait == "true" and $fail_on == "" then "true" else "" end)}
     ]
@@ -106,7 +116,7 @@ output warned-licenses "$(field '.evaluation.licenses.warned')"
 
 if [[ "${NANOBOM_SUMMARY:-true}" == true && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   {
-    echo "### nanobom: [$organization/$project_slug]($project_url)"
+    echo "### nanobom: [$organization/$project_slug]($project_url)${version:+, version \`$version\`}"
     echo
     components="$(field '.component_count')"
     echo "Uploaded $components component$([[ "$components" == 1 ]] || echo s) (HTTP $status)."

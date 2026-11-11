@@ -31,6 +31,14 @@ inputs:
     description: Container image Syft scans instead of `scan-path` when no `sbom` is given.
     required: false
     default: ""
+  version:
+    description: Version of the project to upload to, such as a release branch (`release/2.4`) or a release line (`2.4`); created by its first upload. Empty uploads to the unnamed version. 1 to 64 letters, digits, `.`, `_`, `+`, `/` or `-`.
+    required: false
+    default: ""
+  latest:
+    description: Whether the version becomes the project's latest (true or false). Empty leaves an existing version's flag alone and makes a new one the latest; use false for maintenance branches.
+    required: false
+    default: ""
   fail-on:
     description: Fail the job on the project's evaluation - critical, high, medium or low (open findings at or above that severity), exploited (a known-exploited finding) or license (a component whose license the organization's policy forbids), or several separated by commas, such as `high,license`. Implies `wait`.
     required: false
@@ -111,6 +119,8 @@ runs:
         NANOBOM_ORGANIZATION: ${{ inputs.organization }}
         NANOBOM_PROJECT: ${{ inputs.project }}
         NANOBOM_SBOM: ${{ inputs.sbom != '' && inputs.sbom || format('{0}/nanobom-sbom.cdx.json', runner.temp) }}
+        NANOBOM_VERSION: ${{ inputs.version }}
+        NANOBOM_LATEST: ${{ inputs.latest }}
         NANOBOM_FAIL_ON: ${{ inputs.fail-on }}
         NANOBOM_WAIT: ${{ inputs.wait }}
         NANOBOM_SOURCE_COMMIT: ${{ inputs.source-commit }}

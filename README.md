@@ -49,6 +49,8 @@ defaults to the repository's name and is created by its first upload.
 | `sbom` | | Path of an existing CycloneDX JSON SBOM; without it, one is generated |
 | `scan-path` | `.` | Directory Syft scans when no `sbom` is given |
 | `scan-image` | | Container image Syft scans instead of `scan-path` |
+| `version` | | Version of the project to upload to, such as `release/2.4` or `2.4`; created by its first upload; empty for the unnamed version |
+| `latest` | | `true` or `false`: whether the version becomes the project's latest; empty makes a new version the latest and leaves an existing one alone |
 | `fail-on` | | Fail when open findings are at or above `critical`, `high`, `medium` or `low`, when one is known `exploited` (CISA KEV), or when a component's license is forbidden by the organization's `license` policy; several separated by commas (`high,license`); implies `wait` |
 | `wait` | `true` | Wait for the evaluation and report it |
 | `source-commit` | the workflow's commit | Commit shown in the project's upload history |
@@ -96,6 +98,32 @@ jobs:
           scan-image: ghcr.io/acme/web:${{ github.ref_name }}
           fail-on: exploited
 ```
+
+A main branch and maintenance branches, each in its own version of the project, with `main`
+kept as the latest ([versions](https://alixanneraud.github.io/nanobom/how-to/track-versions.html)):
+
+```yaml
+on:
+  push:
+    branches: [main, "release/**"]
+
+jobs:
+  sbom:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: AlixANNERAUD/nanobom-action@v1
+        with:
+          url: ${{ vars.NANOBOM_URL }}
+          token: ${{ secrets.NANOBOM_TOKEN }}
+          organization: acme
+          version: ${{ github.ref_name }}
+          latest: ${{ github.ref_name == 'main' }}
+          fail-on: high
+```
+
+Run it on long-lived branches only: on pull request branches, `ref_name` would create a version
+per branch.
 
 An SBOM from the build, with a later step using the outputs:
 

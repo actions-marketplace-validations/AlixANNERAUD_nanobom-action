@@ -55,13 +55,23 @@ check "it sends the token" test "$(last_request .authorization)" = "Bearer nanob
 check "it sends JSON" test "$(last_request .content_type)" = "application/json"
 check "it asks to wait" test "$(last_request .query.wait)" = "true"
 check "it sends the commit" test "$(last_request .query.source_commit)" = "abc123"
-check "it sends no empty parameter" test "$(last_request '.query | has("image_tag") or has("fail_on")')" = "false"
+check "it sends no empty parameter" test "$(last_request '.query | has("image_tag") or has("fail_on") or has("version") or has("latest")')" = "false"
 check "outputs the status" contains "$out" "http-status=201"
 check "outputs the evaluation" contains "$out" "evaluation-status=succeeded"
 check "outputs the counts" contains "$out" "medium=1"
 check "outputs the project URL" contains "$out" "project-url=http://127.0.0.1:$port/organizations/acme/projects/passing"
 check "summarizes the findings" contains "$summary" "[GHSA-medium]("
 check "summarizes the counts" contains "$summary" "| 0 | 0 | 1 | 0 | 0 | 0 |"
+
+run passing NANOBOM_VERSION="release/2.4+lts" NANOBOM_LATEST=" False "
+check "a versioned upload succeeds" test "$code" -eq 0
+check "it sends the version" test "$(last_request .query.version)" = "release/2.4+lts"
+check "it sends latest normalized" test "$(last_request .query.latest)" = "false"
+check "it names the version in the summary" contains "$summary" "version \`release/2.4+lts\`"
+
+run passing NANOBOM_LATEST=maybe
+check "an invalid latest fails" test "$code" -ne 0
+check "it explains latest" contains "$log" "latest must be true or false"
 
 run gated NANOBOM_FAIL_ON=" High "
 check "a gated upload fails" test "$code" -ne 0
